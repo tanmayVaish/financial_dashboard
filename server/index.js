@@ -2,9 +2,18 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-require ('dotenv').config();
+const cors = require('cors');
+const crypto = require('crypto');
+
+require('dotenv').config();
+
 const prisma = new PrismaClient();
 const app = express();
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true, 
+  exposedHeaders: ['Authorization'], 
+}));
 app.use(express.json());
 
 // Middleware for JWT authentication
@@ -22,7 +31,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 // User registration
-app.post('/register', async (req, res) => {
+app.post('/signup', async (req, res) => {
   const { email, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
@@ -31,8 +40,8 @@ app.post('/register', async (req, res) => {
   res.json(user);
 });
 
-// User login
-app.post('/login', async (req, res) => {
+// User login with enhanced token security
+app.post('/signin', async (req, res) => {
   const { email, password } = req.body;
   const user = await prisma.user.findUnique({ where: { email } });
 
@@ -40,15 +49,32 @@ app.post('/login', async (req, res) => {
     return res.status(401).send('Invalid credentials');
   }
 
-  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
-  res.json({ token });
+  const uniqueKey = crypto.randomBytes(32).toString('hex');
+  const token = jwt.sign(
+    {
+      userId: user.id,
+      uniqueKey,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: '1h',
+      audience: 'your-app-name',
+      issuer: 'your-company-name',
+      subject: user.id.toString(),
+    }
+  );
+
+  // Send token via Authorization header
+  res.setHeader('Authorization', `Bearer ${token}`);
+  res.json({ message: 'Login successful' });
 });
 
 // Fetch paginated transactions
 app.get('/transactions', authenticateToken, async (req, res) => {
-  const { page = 1, limit = 10, type, status, startDate, endDate } = req.query;
+  const { page = 1, limit = 10, type, status, startDate, endDate , id} = req.query;
   const where = {};
 
+  if (id) where.id = parseInt(id);
   if (type) where.type = type;
   if (status) where.status = status;
   if (startDate && endDate) {
@@ -110,8 +136,6 @@ app.get('/recent-transactions', authenticateToken, async (req, res) => {
   res.json(transactions);
 });
 
-
-
 // Server-side implementation of SSE (in index.js)
 app.get('/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -129,13 +153,10 @@ app.get('/events', (req, res) => {
 
   // Call sendTransactionUpdate whenever there's a new transaction
   const transactionListener = async () => {
-    // Listen for new transactions (you can implement a more sophisticated listener here)
     sendTransactionUpdate();
   };
 
   transactionListener(); // Initial send
-  
-  // Optional: Use a cron job or a subscription service to handle updates
 
   // Clean up when client disconnects
   req.on('close', () => {
@@ -144,7 +165,38 @@ app.get('/events', (req, res) => {
   });
 });
 
+// Create a new transaction
+app.post('/transactions', authenticateToken, async (req, res) => {
+  const { type, amount, status } = req.body;
 
+  // Basic validation
+  if (!type || !['credit', 'debit'].includes(type)) {
+    return res.status(400).send('Invalid transaction type. Must be "credit" or "debit".');
+  }
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return res.status(400).send('Invalid amount. Must be a positive number.');
+  }
+  if (!status || !['successful', 'pending', 'failed'].includes(status)) {
+    return res.status(400).send('Invalid status. Must be "successful", "pending", or "failed".');
+  }
+
+  try {
+    const transaction = await prisma.transaction.create({
+      data: {
+        type,
+        amount: parseFloat(amount),
+        status,
+        createdAt: new Date(), // Automatically set the current timestamp
+        userId: req.userId, // Assuming transactions are tied to authenticated users
+      },
+    });
+
+    res.status(201).json(transaction);
+  } catch (error) {
+    console.error('Error creating transaction:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
 
 
 // Start server
