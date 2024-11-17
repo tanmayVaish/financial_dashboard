@@ -16,7 +16,10 @@ import { styled } from "@mui/material/styles";
 import { GoogleIcon, FacebookIcon, SitemarkIcon } from "./CustomIcons";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Snackbar from "@mui/material/Snackbar";
+import MuiAlert from "@mui/material/Alert";
 
+// Styling components...
 const Card = styled(MuiCard)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -66,6 +69,9 @@ export default function SignUp({ authToken }) {
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState("");
   const [nameError, setNameError] = React.useState(false);
   const [nameErrorMessage, setNameErrorMessage] = React.useState("");
+  const [snackbarOpen, setSnackbarOpen] = React.useState(false);
+  const [snackbarMessage, setSnackbarMessage] = React.useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = React.useState("success");
   const navigate = useNavigate();
 
   const validateInputs = () => {
@@ -125,17 +131,18 @@ export default function SignUp({ authToken }) {
         signupData
       );
 
-      if (!response.data.success) {
-        alert(response.data.error || "An error occurred during signup.");
-        return;
-      }
-
-      alert(response.data.message || "Signup successful!");
+      setSnackbarSeverity("success");
+      setSnackbarMessage(response.data.message || "Signup successful!");
+      setSnackbarOpen(true);
       navigate("/signin");
       console.log("Signup response:", response.data);
     } catch (error) {
+      setSnackbarSeverity("error");
+      setSnackbarMessage(
+        error.response?.data?.error || "An error occurred during signup."
+      );
+      setSnackbarOpen(true);
       console.error("Signup error:", error.response?.data || error.message);
-      alert(error.response?.data?.error || "An error occurred during signup.");
     }
   };
 
@@ -144,6 +151,10 @@ export default function SignUp({ authToken }) {
       navigate("/");
     }
   }, [authToken, navigate]);
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
 
   return (
     <>
@@ -250,6 +261,21 @@ export default function SignUp({ authToken }) {
           </Box>
         </Card>
       </SignUpContainer>
+
+      {/* Snackbar for displaying messages */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <MuiAlert
+          onClose={handleCloseSnackbar}
+          severity={snackbarSeverity}
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </MuiAlert>
+      </Snackbar>
     </>
   );
 }

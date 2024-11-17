@@ -120,6 +120,7 @@ export default function SignIn({ setAuthToken, authToken }) {
 
     let isValid = true;
 
+    // Email validation
     if (!email.value || !/\S+@\S+\.\S+/.test(email.value)) {
       setEmailError(true);
       setEmailErrorMessage("Please enter a valid email address.");
@@ -129,6 +130,7 @@ export default function SignIn({ setAuthToken, authToken }) {
       setEmailErrorMessage("");
     }
 
+    // Password validation
     if (!password.value || password.value.length < 6) {
       setPasswordError(true);
       setPasswordErrorMessage("Password must be at least 6 characters long.");

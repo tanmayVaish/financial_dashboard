@@ -6,6 +6,7 @@ import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
 import Button from "@mui/material/Button";
 import Select from "@mui/material/Select";
+import { Skeleton, Snackbar, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -42,10 +43,13 @@ const DataTable = () => {
   const [startDate, setStartDate] = React.useState("");
   const [endDate, setEndDate] = React.useState("");
   const [id, setId] = React.useState("");
+  const [loading, setLoading] = React.useState(true); // Add loading state
+  const [transactions, setTransactions] = React.useState([]);
+  const [openSnackbar, setOpenSnackbar] = React.useState(false);
+  const [snackbarMessage, setSnackbarMessage] = React.useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = React.useState("success");
 
   const navigate = useNavigate();
-
-  const [transactions, setTransactions] = React.useState([]);
 
   React.useEffect(() => {
     fetchTransactions();
@@ -53,6 +57,7 @@ const DataTable = () => {
 
   const fetchTransactions = async () => {
     try {
+      setLoading(true); // Start loading
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/transactions`,
         {
@@ -70,8 +75,11 @@ const DataTable = () => {
           },
         }
       );
-
       setTransactions(response.data);
+      setLoading(false); // End loading when data is fetched
+      setSnackbarMessage("Transactions loaded successfully!");
+      setSnackbarSeverity("success");
+      setOpenSnackbar(true);
     } catch (error) {
       if (error.response.status === 401) {
         localStorage.removeItem("authToken");
@@ -79,7 +87,19 @@ const DataTable = () => {
         return;
       }
 
-      console.error("Error fetching transactions:", error);
+      if (error.response.status === 429) {
+        setSnackbarMessage(
+          "Too many requests! Please try again after 15 minutes."
+        );
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
+        return;
+      }
+
+      setLoading(false); // End loading on error
+      setSnackbarMessage("Failed to load transactions. Please try again.");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
     }
   };
 
@@ -97,6 +117,10 @@ const DataTable = () => {
 
   const handleStatusChange = (event) => {
     setStatus(event.target.value);
+  };
+
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
   };
 
   return (
@@ -118,10 +142,6 @@ const DataTable = () => {
               id="id"
               placeholder="Search By ID..."
             />
-            {/* Will add it later */}
-            {/* <Button variant="contained" color="secondary">
-              Search
-            </Button> */}
           </div>
 
           <div className="flex gap-2 items-center justify-center pr-10 border-r-2">
@@ -166,24 +186,42 @@ const DataTable = () => {
             </Select>
           </div>
         </Paper>
+
         <Paper
           sx={{ backgroundColor: "#f5f5f5", width: "100%", padding: "10px" }}
         >
-          <DataGrid
-            rows={transactions}
-            columns={columns}
-            pagination
-            pageSize={limit}
-            onPageChange={(newPage) => setPage(newPage + 1)}
-            initialState={{
-              pagination: { paginationModel: { page: 0, pageSize: 5 } },
-            }}
-            pageSizeOptions={[5, 10]}
-            sx={{ border: 0 }}
-            autoHeight
-          />
+          {loading ? (
+            // Skeleton loader for the table
+            <Skeleton variant="rectangular" width="100%" height={400} />
+          ) : (
+            <DataGrid
+              rows={transactions}
+              columns={columns}
+              pagination
+              pageSize={limit}
+              onPageChange={(newPage) => setPage(newPage + 1)}
+              initialState={{
+                pagination: { paginationModel: { page: 0, pageSize: 5 } },
+              }}
+              pageSizeOptions={[5, 10]}
+              sx={{ border: 0 }}
+              autoHeight
+            />
+          )}
         </Paper>
       </div>
+
+      {/* Snackbar for success/error messages */}
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

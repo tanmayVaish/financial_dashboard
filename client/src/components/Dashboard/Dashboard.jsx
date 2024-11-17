@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DataTable from "./TransactionTable";
 import TransactionSummary from "./TransactionSummary";
 import TransactionRecent from "./TransactionRecent";
-import { Paper } from "@mui/material";
+import { Paper, Snackbar, Alert } from "@mui/material";
 import { PieChart } from "@mui/x-charts/PieChart";
 import { BarChart } from "@mui/x-charts/BarChart";
 
@@ -11,6 +11,9 @@ import axios from "axios";
 
 const Dashboard = ({ authToken }) => {
   const [summary, setSummary] = useState([]);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success"); // can be "error" or "success"
 
   const navigate = useNavigate();
 
@@ -26,6 +29,9 @@ const Dashboard = ({ authToken }) => {
       );
 
       setSummary(response.data);
+      setSnackbarMessage("Data fetched successfully!");
+      setSnackbarSeverity("success");
+      setOpenSnackbar(true);
     } catch (error) {
       if (error.response.status === 401) {
         localStorage.removeItem("authToken");
@@ -33,6 +39,18 @@ const Dashboard = ({ authToken }) => {
         return;
       }
 
+      if (error.response.status === 429) {
+        setSnackbarMessage(
+          "Too many requests! Please try again after 2 minutes."
+        );
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
+        return;
+      }
+
+      setSnackbarMessage("Error fetching transactions!");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
       console.error("Error fetching transactions:", error);
     }
   };
@@ -47,14 +65,22 @@ const Dashboard = ({ authToken }) => {
     }
   }, [authToken, navigate]);
 
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
+  };
+
   return (
-    <div className="flex flex-col items-center bg-gray-200 ">
-      <div className="text-5xl m-4 font-bold ">Dashboard</div>
-      <div className="w-4/5 h-full flex flex-col gap-5">
+    <div className="flex flex-col items-center bg-gray-200 p-4">
+      <h1 className="text-5xl m-4 font-bold text-center">Dashboard</h1>
+      <div className="w-full max-w-screen-xl flex flex-col gap-5 mx-auto">
         <TransactionSummary summary={summary} />
+
+        {/* Graphs and Transaction Status */}
         <div className="flex flex-wrap gap-5 w-full">
           <TransactionRecent />
-          <div className="flex flex-col gap-2 items-center justify-center w-96">
+
+          {/* Transaction Status Pie Chart */}
+          <div className="flex flex-col gap-4 items-center justify-center w-full sm:w-96">
             <Paper
               sx={{
                 backgroundColor: "#f5f5f5",
@@ -62,7 +88,7 @@ const Dashboard = ({ authToken }) => {
                 padding: "10px",
               }}
             >
-              <h2>Transaction Status</h2>
+              <h2 className="text-center font-semibold">Transaction Status</h2>
             </Paper>
             <Paper
               sx={{
@@ -70,9 +96,9 @@ const Dashboard = ({ authToken }) => {
                 width: "100%",
                 padding: "10px",
               }}
-              className="flex flex-col gap-2 items-center justify-center"
+              className="flex flex-col items-center justify-center"
             >
-              {summary && summary.statusCount && (
+              {summary?.statusCount && (
                 <PieChart
                   series={[
                     {
@@ -80,7 +106,7 @@ const Dashboard = ({ authToken }) => {
                         {
                           id: 0,
                           value: summary.statusCount[0]._count.status,
-                          label: "Successfull",
+                          label: "Successful",
                         },
                         {
                           id: 1,
@@ -102,9 +128,13 @@ const Dashboard = ({ authToken }) => {
             </Paper>
           </div>
         </div>
+
+        {/* Transaction Table */}
         <DataTable />
-        <div className="flex flex-row gap-5">
-          <div className="flex flex-col gap-2 w-1/2">
+
+        {/* Bar Charts for Last 30 Days */}
+        <div className="flex flex-wrap gap-5 w-full">
+          <div className="flex flex-col gap-4 w-full sm:w-1/2">
             <Paper
               sx={{
                 backgroundColor: "#f5f5f5",
@@ -112,7 +142,9 @@ const Dashboard = ({ authToken }) => {
                 padding: "10px",
               }}
             >
-              <h2>Volume in Last 30 Days</h2>
+              <h2 className="text-center font-semibold">
+                Volume in Last 30 Days
+              </h2>
             </Paper>
             <Paper
               sx={{
@@ -125,53 +157,18 @@ const Dashboard = ({ authToken }) => {
                 xAxis={[
                   {
                     scaleType: "band",
-                    data: [
-                      "1",
-                      "2",
-                      "3",
-                      "4",
-                      "5",
-                      "6",
-                      "7",
-                      "8",
-                      "9",
-                      "10",
-                      "11",
-                      "12",
-                      "13",
-                      "14",
-                      "15",
-                      "16",
-                      "17",
-                      "18",
-                      "19",
-                      "20",
-                      "21",
-                      "22",
-                      "23",
-                      "24",
-                      "25",
-                      "26",
-                      "27",
-                      "28",
-                      "29",
-                      "30",
-                    ],
+                    data: Array.from({ length: 30 }, (_, i) =>
+                      (i + 1).toString()
+                    ), // 1 to 30
                   },
                 ]}
-                series={[
-                  {
-                    data:
-                      summary && summary.last30DaysCount
-                        ? summary.last30DaysCount
-                        : [],
-                  },
-                ]}
+                series={[{ data: summary?.last30DaysCount || [] }]}
                 height={500}
               />
             </Paper>
           </div>
-          <div className="flex flex-col gap-2 w-1/2">
+
+          <div className="flex flex-col gap-4 w-full sm:w-1/2">
             <Paper
               sx={{
                 backgroundColor: "#f5f5f5",
@@ -179,7 +176,9 @@ const Dashboard = ({ authToken }) => {
                 padding: "10px",
               }}
             >
-              <h2>Total Amount in Last 30 Days</h2>
+              <h2 className="text-center font-semibold">
+                Total Amount in Last 30 Days
+              </h2>
             </Paper>
             <Paper
               sx={{
@@ -192,54 +191,34 @@ const Dashboard = ({ authToken }) => {
                 xAxis={[
                   {
                     scaleType: "band",
-                    data: [
-                      "1",
-                      "2",
-                      "3",
-                      "4",
-                      "5",
-                      "6",
-                      "7",
-                      "8",
-                      "9",
-                      "10",
-                      "11",
-                      "12",
-                      "13",
-                      "14",
-                      "15",
-                      "16",
-                      "17",
-                      "18",
-                      "19",
-                      "20",
-                      "21",
-                      "22",
-                      "23",
-                      "24",
-                      "25",
-                      "26",
-                      "27",
-                      "28",
-                      "29",
-                      "30",
-                    ],
+                    data: Array.from({ length: 30 }, (_, i) =>
+                      (i + 1).toString()
+                    ), // 1 to 30
                   },
                 ]}
-                series={[
-                  {
-                    data:
-                      summary && summary.last30DaysAmount
-                        ? summary.last30DaysAmount
-                        : [],
-                  },
-                ]}
+                series={[{ data: summary?.last30DaysAmount || [] }]}
                 height={500}
               />
             </Paper>
           </div>
         </div>
       </div>
+
+      {/* Snackbar for success/error messages */}
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbarSeverity}
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
