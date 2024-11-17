@@ -89,72 +89,91 @@ const DataTable = () => {
   };
 
   return (
-    <Paper sx={{ backgroundColor: "#f5f5f5", width: "100%", padding: "10px" }}>
-      <div className="flex items-center flex-wrap justify-end gap-5 p-4">
-        <div className="flex flex-1 gap-2 items-center justify-between pr-10 border-r-2">
-          <TextField
-            onChange={(e) => setId(e.target.value)}
-            fullWidth
-            id="id"
-            placeholder="Search By ID..."
-          />
-          {/* <Button variant="contained" color="secondary">
-            Search
-          </Button> */}
-        </div>
+    <div className="flex flex-col gap-2">
+      <Paper
+        sx={{ backgroundColor: "#f5f5f5", width: "100%", padding: "10px" }}
+      >
+        <h2>Transaction Table</h2>
+      </Paper>
+      <div className="flex flex-col gap-2">
+        <Paper
+          sx={{ backgroundColor: "#f5f5f5", width: "100%" }}
+          className="flex items-center flex-wrap justify-end gap-5 p-4"
+        >
+          <div className="flex flex-1 gap-2 items-center justify-between pr-10 border-r-2">
+            <TextField
+              onChange={(e) => setId(e.target.value)}
+              fullWidth
+              id="id"
+              placeholder="Search By ID..."
+            />
+            {/* Will add it later */}
+            <Button variant="contained" color="secondary">
+              Search
+            </Button>
+          </div>
 
-        <div className="flex gap-2 items-center justify-center pr-10 border-r-2">
-          <InputLabel htmlFor="start-date">Start Date</InputLabel>
-          <TextField
-            id="start-date"
-            type="date"
-            InputLabelProps={{ shrink: true }}
-            onChange={handleStartDateChange}
+          <div className="flex gap-2 items-center justify-center pr-10 border-r-2">
+            <InputLabel htmlFor="start-date">Start Date</InputLabel>
+            <TextField
+              id="start-date"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              onChange={handleStartDateChange}
+            />
+          </div>
+          <div className="flex gap-2 items-center justify-center pr-10 border-r-2">
+            <InputLabel htmlFor="end-date">End Date</InputLabel>
+            <TextField
+              id="end-date"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              onChange={handleEndDateChange}
+            />
+          </div>
+          <div className="flex gap-2 items-center justify-center pr-10 border-r-2">
+            <Select
+              defaultValue={""}
+              label="Transaction Type"
+              onChange={handleTypeChange}
+            >
+              <MenuItem value="credit">Credit</MenuItem>
+              <MenuItem value="debit">Debit</MenuItem>
+              <MenuItem value="">None</MenuItem>
+            </Select>
+          </div>
+          <div className="flex gap-2 items-center justify-center ">
+            <Select
+              defaultValue=""
+              label="Status"
+              onChange={handleStatusChange}
+            >
+              <MenuItem value="successful">Successful</MenuItem>
+              <MenuItem value="pending">Pending</MenuItem>
+              <MenuItem value="failed">Failed</MenuItem>
+              <MenuItem value="">None</MenuItem>
+            </Select>
+          </div>
+        </Paper>
+        <Paper
+          sx={{ backgroundColor: "#f5f5f5", width: "100%", padding: "10px" }}
+        >
+          <DataGrid
+            rows={transactions}
+            columns={columns}
+            pagination
+            pageSize={limit}
+            onPageChange={(newPage) => setPage(newPage + 1)}
+            initialState={{
+              pagination: { paginationModel: { page: 0, pageSize: 5 } },
+            }}
+            pageSizeOptions={[5, 10]}
+            sx={{ border: 0 }}
+            autoHeight
           />
-        </div>
-        <div className="flex gap-2 items-center justify-center pr-10 border-r-2">
-          <InputLabel htmlFor="end-date">End Date</InputLabel>
-          <TextField
-            id="end-date"
-            type="date"
-            InputLabelProps={{ shrink: true }}
-            onChange={handleEndDateChange}
-          />
-        </div>
-        <div className="flex gap-2 items-center justify-center pr-10 border-r-2">
-          <Select
-            defaultValue={""}
-            label="Transaction Type"
-            onChange={handleTypeChange}
-          >
-            <MenuItem value="credit">Credit</MenuItem>
-            <MenuItem value="debit">Debit</MenuItem>
-            <MenuItem value="">None</MenuItem>
-          </Select>
-        </div>
-        <div className="flex gap-2 items-center justify-center ">
-          <Select defaultValue="" label="Status" onChange={handleStatusChange}>
-            <MenuItem value="successful">Successful</MenuItem>
-            <MenuItem value="pending">Pending</MenuItem>
-            <MenuItem value="failed">Failed</MenuItem>
-            <MenuItem value="">None</MenuItem>
-          </Select>
-        </div>
+        </Paper>
       </div>
-      <DataGrid
-        rows={transactions}
-        columns={columns}
-        pagination
-        pageSize={limit}
-        onPageChange={(newPage) => setPage(newPage + 1)}
-        initialState={{
-          pagination: { paginationModel: { page: 0, pageSize: 5 } },
-        }}
-        pageSizeOptions={[5, 10]}
-        sx={{ border: 0 }}
-        autoHeight
-      />
-    </Paper>
+    </div>
   );
 };
 

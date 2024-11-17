@@ -59,7 +59,7 @@ const SignUpContainer = styled(Stack)(({ theme }) => ({
   },
 }));
 
-export default function SignUp(props) {
+export default function SignUp({ authToken }) {
   const [emailError, setEmailError] = React.useState(false);
   const [emailErrorMessage, setEmailErrorMessage] = React.useState("");
   const [passwordError, setPasswordError] = React.useState(false);
@@ -132,6 +132,12 @@ export default function SignUp(props) {
       alert(error.response?.data?.error || "An error occurred during signup.");
     }
   };
+
+  React.useEffect(() => {
+    if (authToken) {
+      navigate("/");
+    }
+  }, [authToken, navigate]);
 
   return (
     <>

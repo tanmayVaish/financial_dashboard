@@ -14,7 +14,6 @@ import axios from "axios";
 
 const App = () => {
   const [authToken, setAuthToken] = useState(localStorage.getItem("authToken")); // Check if the token is already in localStorage
-  const navigate = useNavigate();
 
   return (
     <>
