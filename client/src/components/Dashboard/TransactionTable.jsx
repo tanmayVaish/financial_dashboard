@@ -89,7 +89,7 @@ const DataTable = () => {
 
       if (error.response.status === 429) {
         setSnackbarMessage(
-          "Too many requests! Please try again after 15 minutes."
+          "Too many requests! Please try again after 2 minutes."
         );
         setSnackbarSeverity("error");
         setOpenSnackbar(true);
