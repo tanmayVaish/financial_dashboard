@@ -9,8 +9,6 @@ import { BarChart } from "@mui/x-charts/BarChart";
 
 import axios from "axios";
 
-const API_URL = "http://localhost:3000/api";
-
 const Dashboard = ({ authToken }) => {
   const [summary, setSummary] = useState([]);
 
@@ -18,11 +16,14 @@ const Dashboard = ({ authToken }) => {
 
   const fetchSummary = async () => {
     try {
-      const response = await axios.get(`${API_URL}/summary`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/summary`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
 
       setSummary(response.data);
     } catch (error) {

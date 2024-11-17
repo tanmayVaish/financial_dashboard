@@ -9,8 +9,6 @@ import Select from "@mui/material/Select";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = "http://localhost:3000/api";
-
 const columns = [
   { field: "id", headerName: "ID", flex: 1 },
   { field: "type", headerName: "Transaction Type", flex: 2 },
@@ -55,20 +53,23 @@ const DataTable = () => {
 
   const fetchTransactions = async () => {
     try {
-      const response = await axios.get(`${API_URL}/transactions`, {
-        params: {
-          page,
-          limit,
-          type,
-          status,
-          startDate,
-          endDate,
-          id,
-        },
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/transactions`,
+        {
+          params: {
+            page,
+            limit,
+            type,
+            status,
+            startDate,
+            endDate,
+            id,
+          },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
 
       setTransactions(response.data);
     } catch (error) {

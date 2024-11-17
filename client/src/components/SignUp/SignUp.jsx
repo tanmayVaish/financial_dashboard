@@ -121,7 +121,7 @@ export default function SignUp({ authToken }) {
 
     try {
       const response = await axios.post(
-        "http://localhost:3000/auth/signup",
+        `${import.meta.env.VITE_AUTH_URL}/signup`,
         signupData
       );
 

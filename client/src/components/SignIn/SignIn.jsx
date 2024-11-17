@@ -84,7 +84,7 @@ export default function SignIn({ setAuthToken, authToken }) {
 
     try {
       const response = await axios.post(
-        "http://localhost:3000/auth/signin",
+        `${import.meta.env.VITE_AUTH_URL}/signin`,
         { email, password },
         { withCredentials: true } // Allows sending cookies with the request
       );

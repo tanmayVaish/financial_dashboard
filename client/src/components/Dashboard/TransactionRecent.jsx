@@ -31,7 +31,7 @@ const TransactionRecent = () => {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    const eventSource = new EventSource("http://localhost:3000/events");
+    const eventSource = new EventSource(import.meta.env.VITE_EVENT_URL);
 
     eventSource.onmessage = (event) => {
       const newData = JSON.parse(event.data);
