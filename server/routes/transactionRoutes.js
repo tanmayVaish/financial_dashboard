@@ -74,7 +74,17 @@ transactionRouter.get("/transactions/:id", async (req, res) => {
 });
 
 transactionRouter.get("/summary", async (req, res) => {
+  const cacheKey = "transaction_summary"; // Redis cache key
   try {
+    // Try to get the cached data from Redis
+    const cachedSummary = await redisPublisher.get(cacheKey);
+
+    if (cachedSummary) {
+      // If cache exists, return it
+      return res.json(JSON.parse(cachedSummary));
+    }
+
+    // If no cache, run the database queries
     const currentDay = new Date();
     currentDay.setHours(0, 0, 0, 0);
     const nextDay = new Date(currentDay);
@@ -126,7 +136,8 @@ transactionRouter.get("/summary", async (req, res) => {
       }),
     ]);
 
-    res.json({
+    // Create the response object
+    const summary = {
       totalVolume,
       averageAmount: averageAmount._avg.amount || 0,
       statusCount,
@@ -135,12 +146,20 @@ transactionRouter.get("/summary", async (req, res) => {
       monthlyVolume,
       monthlyTotalAmount: monthlyTotalAmount._sum.amount || 0,
       last30DaysData,
-    });
+    };
+
+    // Cache the result in Redis for 1 hour (3600 seconds)
+    await redisPublisher.setex(cacheKey, 3600, JSON.stringify(summary));
+
+    // Return the response
+    res.json(summary);
   } catch (error) {
     logger.error("Error fetching transaction summary", { error });
     res.status(500).send("Internal Server Error");
   }
 });
+
+module.exports = transactionRouter;
 
 transactionRouter.post("/transactions", async (req, res) => {
   const { type, amount, status, payeeId, recipientId } = req.body;
