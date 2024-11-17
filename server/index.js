@@ -143,108 +143,78 @@ app.get('/transactions/:id', authenticateToken, async (req, res) => {
 
 app.get('/summary', authenticateToken, async (req, res) => {
   try {
-    // Total transaction count
-    const totalVolume = await prisma.transaction.count();
-
-    // Average transaction amount
-    const averageAmount = await prisma.transaction.aggregate({
-      _avg: { amount: true }
-    });
-
-    // Transaction count by status
-    const statusCount = await prisma.transaction.groupBy({
-      by: ['status'],
-      _count: { status: true }
-    });
-
-    // Current day totals
     const currentDay = new Date();
     currentDay.setHours(0, 0, 0, 0); // Start of the day
     const nextDay = new Date(currentDay);
-    nextDay.setDate(nextDay.getDate() + 1); // Start of the next day
+    nextDay.setDate(nextDay.getDate() + 1);
 
-    const dailyVolume = await prisma.transaction.count({
-      where: {
-        createdAt: {
-          gte: currentDay,
-          lt: nextDay
-        }
-      }
-    });
-
-    const dailyTotalAmount = await prisma.transaction.aggregate({
-      _sum: { amount: true },
-      where: {
-        createdAt: {
-          gte: currentDay,
-          lt: nextDay
-        }
-      }
-    });
-
-    // Current month totals
     const startOfMonth = new Date(currentDay.getFullYear(), currentDay.getMonth(), 1); // First day of the month
     const startOfNextMonth = new Date(currentDay.getFullYear(), currentDay.getMonth() + 1, 1); // First day of the next month
 
-    const monthlyVolume = await prisma.transaction.count({
-      where: {
-        createdAt: {
-          gte: startOfMonth,
-          lt: startOfNextMonth
-        }
-      }
-    });
+    const last30DaysStart = new Date();
+    last30DaysStart.setDate(last30DaysStart.getDate() - 29);
+    last30DaysStart.setHours(0, 0, 0, 0);
 
-    const monthlyTotalAmount = await prisma.transaction.aggregate({
-      _sum: { amount: true },
-      where: {
-        createdAt: {
-          gte: startOfMonth,
-          lt: startOfNextMonth
-        }
-      }
-    });
-
-    // Last 30 days' volume and total amount
-    const last30DaysCount = [];
-    const last30DaysAmount = [];
-    
-    for (let i = 0; i < 30; i++) {
-      const day = new Date();
-      day.setDate(day.getDate() - i);
-      const startOfDay = new Date(day);
-      startOfDay.setHours(0, 0, 0, 0); // Start of the day
-      const endOfDay = new Date(day);
-      endOfDay.setHours(23, 59, 59, 999); // End of the day
-
-      const dailyCount = await prisma.transaction.count({
+    // Fetch all metrics concurrently
+    const [
+      totalVolume,
+      averageAmount,
+      statusCount,
+      dailyVolume,
+      dailyTotalAmount,
+      monthlyVolume,
+      monthlyTotalAmount,
+      last30DaysData
+    ] = await Promise.all([
+      prisma.transaction.count(),
+      prisma.transaction.aggregate({ _avg: { amount: true } }),
+      prisma.transaction.groupBy({ by: ['status'], _count: { status: true } }),
+      prisma.transaction.count({
         where: {
-          createdAt: {
-            gte: startOfDay,
-            lt: endOfDay
-          }
+          createdAt: { gte: currentDay, lt: nextDay }
         }
-      });
-
-      const dailySum = await prisma.transaction.aggregate({
+      }),
+      prisma.transaction.aggregate({
         _sum: { amount: true },
         where: {
-          createdAt: {
-            gte: startOfDay,
-            lt: endOfDay
-          }
+          createdAt: { gte: currentDay, lt: nextDay }
         }
-      });
+      }),
+      prisma.transaction.count({
+        where: {
+          createdAt: { gte: startOfMonth, lt: startOfNextMonth }
+        }
+      }),
+      prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: {
+          createdAt: { gte: startOfMonth, lt: startOfNextMonth }
+        }
+      }),
+      prisma.transaction.findMany({
+        where: {
+          createdAt: { gte: last30DaysStart, lt: nextDay }
+        },
+        select: {
+          createdAt: true,
+          amount: true
+        }
+      })
+    ]);
 
-      last30DaysCount.push(
-        dailyCount
-      );
+    // Aggregate data for the last 30 days
+    const last30DaysCount = Array(30).fill(0);
+    const last30DaysAmount = Array(30).fill(0);
 
-      last30DaysAmount.push(
-        dailySum._sum.amount || 0
-      );
-
-    }
+    last30DaysData.forEach((transaction) => {
+      const transactionDate = new Date(transaction.createdAt);
+      transactionDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((currentDay - transactionDate) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 30) {
+        last30DaysCount[29 - diffDays]++;
+        last30DaysAmount[29 - diffDays] += transaction.amount;
+      }
+    });
 
     // Response with all calculated metrics
     res.json({
@@ -263,6 +233,7 @@ app.get('/summary', authenticateToken, async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
 
 
 

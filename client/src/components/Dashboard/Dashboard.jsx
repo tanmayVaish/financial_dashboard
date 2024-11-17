@@ -23,8 +23,15 @@ const Dashboard = ({ authToken }) => {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
       });
+
       setSummary(response.data);
     } catch (error) {
+      if (error.response.status === 401) {
+        localStorage.removeItem("authToken");
+        navigate("/signin");
+        return;
+      }
+
       console.error("Error fetching transactions:", error);
     }
   };

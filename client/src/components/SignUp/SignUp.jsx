@@ -124,6 +124,12 @@ export default function SignUp({ authToken }) {
         "http://localhost:3000/signup",
         signupData
       );
+
+      if (!response.data.success) {
+        alert(response.data.error || "An error occurred during signup.");
+        return;
+      }
+
       alert(response.data.message || "Signup successful!");
       navigate("/signin");
       console.log("Signup response:", response.data);

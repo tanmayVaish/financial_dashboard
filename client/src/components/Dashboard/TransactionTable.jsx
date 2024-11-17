@@ -6,6 +6,7 @@ import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
 import Button from "@mui/material/Button";
 import Select from "@mui/material/Select";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const API_URL = "http://localhost:3000";
@@ -44,6 +45,8 @@ const DataTable = () => {
   const [endDate, setEndDate] = React.useState("");
   const [id, setId] = React.useState("");
 
+  const navigate = useNavigate();
+
   const [transactions, setTransactions] = React.useState([]);
 
   React.useEffect(() => {
@@ -66,8 +69,15 @@ const DataTable = () => {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
       });
+
       setTransactions(response.data);
     } catch (error) {
+      if (error.response.status === 401) {
+        localStorage.removeItem("authToken");
+        navigate("/signin");
+        return;
+      }
+
       console.error("Error fetching transactions:", error);
     }
   };
