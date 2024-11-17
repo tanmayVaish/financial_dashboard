@@ -67,8 +67,7 @@ export default function SignUp({ authToken }) {
   const [emailErrorMessage, setEmailErrorMessage] = React.useState("");
   const [passwordError, setPasswordError] = React.useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState("");
-  const [nameError, setNameError] = React.useState(false);
-  const [nameErrorMessage, setNameErrorMessage] = React.useState("");
+
   const [snackbarOpen, setSnackbarOpen] = React.useState(false);
   const [snackbarMessage, setSnackbarMessage] = React.useState("");
   const [snackbarSeverity, setSnackbarSeverity] = React.useState("success");
@@ -77,7 +76,6 @@ export default function SignUp({ authToken }) {
   const validateInputs = () => {
     const email = document.getElementById("email");
     const password = document.getElementById("password");
-    const name = document.getElementById("name");
 
     let isValid = true;
 
@@ -99,19 +97,11 @@ export default function SignUp({ authToken }) {
       setPasswordErrorMessage("");
     }
 
-    if (!name.value || name.value.length < 1) {
-      setNameError(true);
-      setNameErrorMessage("Name is required.");
-      isValid = false;
-    } else {
-      setNameError(false);
-      setNameErrorMessage("");
-    }
-
     return isValid;
   };
 
   const handleSubmit = async (event) => {
+    console.log(event);
     event.preventDefault(); // Prevent default form submission behavior
 
     if (!validateInputs()) {
@@ -120,7 +110,6 @@ export default function SignUp({ authToken }) {
 
     const data = new FormData(event.currentTarget);
     const signupData = {
-      name: data.get("name"),
       email: data.get("email"),
       password: data.get("password"),
     };
@@ -134,7 +123,11 @@ export default function SignUp({ authToken }) {
       setSnackbarSeverity("success");
       setSnackbarMessage(response.data.message || "Signup successful!");
       setSnackbarOpen(true);
-      navigate("/signin");
+
+      setTimeout(() => {
+        navigate("/signin");
+      }, 3000);
+
       console.log("Signup response:", response.data);
     } catch (error) {
       setSnackbarSeverity("error");

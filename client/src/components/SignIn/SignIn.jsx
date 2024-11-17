@@ -12,6 +12,8 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import MuiCard from "@mui/material/Card";
+import Snackbar from "@mui/material/Snackbar";
+import MuiAlert from "@mui/material/Alert";
 import { styled } from "@mui/material/styles";
 import { GoogleIcon, FacebookIcon, SitemarkIcon } from "./CustomIcons";
 import { useEffect } from "react";
@@ -60,11 +62,20 @@ const SignInContainer = styled(Stack)(({ theme }) => ({
   },
 }));
 
+const Alert = React.forwardRef((props, ref) => (
+  <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />
+));
+
 export default function SignIn({ setAuthToken, authToken }) {
   const [emailError, setEmailError] = React.useState(false);
   const [emailErrorMessage, setEmailErrorMessage] = React.useState("");
   const [passwordError, setPasswordError] = React.useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState("");
+
+  const [snackbarOpen, setSnackbarOpen] = React.useState(false);
+  const [snackbarMessage, setSnackbarMessage] = React.useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = React.useState("success");
+
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
@@ -77,30 +88,38 @@ export default function SignIn({ setAuthToken, authToken }) {
       const response = await axios.post(
         `${import.meta.env.VITE_AUTH_URL}/signin`,
         { email, password },
-        { withCredentials: true } // Allows sending cookies with the request
+        { withCredentials: true }
       );
 
       if (response.status === 200) {
         const authHeader = response.headers.authorization;
         if (authHeader && authHeader.startsWith("Bearer ")) {
-          const token = authHeader.split(" ")[1]; // Extract token from header
-          localStorage.setItem("authToken", token); // Save token in localStorage
+          const token = authHeader.split(" ")[1];
+          localStorage.setItem("authToken", token);
           setAuthToken(token);
-          alert("SignIn successful!");
-          console.log("Token saved to localStorage:", token);
+          setSnackbarMessage("SignIn successful!");
+          setSnackbarSeverity("success");
+          setSnackbarOpen(true);
+
+          setTimeout(() => {
+            navigate("/dashboard");
+          }, 3000);
         } else {
-          alert("Authorization header missing or invalid.");
+          setSnackbarMessage("Authorization header missing or invalid.");
+          setSnackbarSeverity("error");
+          setSnackbarOpen(true);
         }
       }
     } catch (error) {
       if (error.response) {
-        // Server responded with a status outside of the 2xx range
         const result = error.response.data;
-        alert(result.error || "SignIn failed.");
+        setSnackbarMessage(result.error || "SignIn failed.");
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
       } else {
-        // Network error or request not completed
-        console.error("Error during SignIn:", error);
-        alert("An error occurred. Please try again.");
+        setSnackbarMessage("An error occurred. Please try again.");
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
       }
     }
   };
@@ -111,7 +130,6 @@ export default function SignIn({ setAuthToken, authToken }) {
 
     let isValid = true;
 
-    // Email validation
     if (!email.value || !/\S+@\S+\.\S+/.test(email.value)) {
       setEmailError(true);
       setEmailErrorMessage("Please enter a valid email address.");
@@ -121,7 +139,6 @@ export default function SignIn({ setAuthToken, authToken }) {
       setEmailErrorMessage("");
     }
 
-    // Password validation
     if (!password.value || password.value.length < 6) {
       setPasswordError(true);
       setPasswordErrorMessage("Password must be at least 6 characters long.");
@@ -132,6 +149,13 @@ export default function SignIn({ setAuthToken, authToken }) {
     }
 
     return isValid;
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbarOpen(false);
   };
 
   useEffect(() => {
@@ -218,6 +242,19 @@ export default function SignIn({ setAuthToken, authToken }) {
           </Box>
         </Card>
       </SignInContainer>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbarSeverity}
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }
