@@ -9,7 +9,7 @@ import Select from "@mui/material/Select";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "http://localhost:3000/api";
 
 const columns = [
   { field: "id", headerName: "ID", flex: 1 },
@@ -118,9 +118,9 @@ const DataTable = () => {
               placeholder="Search By ID..."
             />
             {/* Will add it later */}
-            <Button variant="contained" color="secondary">
+            {/* <Button variant="contained" color="secondary">
               Search
-            </Button>
+            </Button> */}
           </div>
 
           <div className="flex gap-2 items-center justify-center pr-10 border-r-2">

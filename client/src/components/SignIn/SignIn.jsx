@@ -14,7 +14,8 @@ import Stack from "@mui/material/Stack";
 import MuiCard from "@mui/material/Card";
 import { styled } from "@mui/material/styles";
 import { GoogleIcon, FacebookIcon, SitemarkIcon } from "./CustomIcons";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 const Card = styled(MuiCard)(({ theme }) => ({
@@ -82,15 +83,14 @@ export default function SignIn({ setAuthToken, authToken }) {
     const password = data.get("password");
 
     try {
-      const response = await fetch("http://localhost:3000/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
+      const response = await axios.post(
+        "http://localhost:3000/auth/signin",
+        { email, password },
+        { withCredentials: true } // Allows sending cookies with the request
+      );
 
-      if (response.ok) {
-        const authHeader = response.headers.get("Authorization");
+      if (response.status === 200) {
+        const authHeader = response.headers.authorization;
         if (authHeader && authHeader.startsWith("Bearer ")) {
           const token = authHeader.split(" ")[1]; // Extract token from header
           localStorage.setItem("authToken", token); // Save token in localStorage
@@ -100,13 +100,17 @@ export default function SignIn({ setAuthToken, authToken }) {
         } else {
           alert("Authorization header missing or invalid.");
         }
-      } else {
-        const result = await response.json();
-        alert(result.error || "SignIn failed.");
       }
     } catch (error) {
-      console.error("Error during SignIn:", error);
-      alert("An error occurred. Please try again.");
+      if (error.response) {
+        // Server responded with a status outside of the 2xx range
+        const result = error.response.data;
+        alert(result.error || "SignIn failed.");
+      } else {
+        // Network error or request not completed
+        console.error("Error during SignIn:", error);
+        alert("An error occurred. Please try again.");
+      }
     }
   };
 

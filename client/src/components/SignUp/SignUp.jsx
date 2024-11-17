@@ -121,7 +121,7 @@ export default function SignUp({ authToken }) {
 
     try {
       const response = await axios.post(
-        "http://localhost:3000/signup",
+        "http://localhost:3000/auth/signup",
         signupData
       );
 
