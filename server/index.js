@@ -2,13 +2,14 @@ const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const cors = require("cors");
 const crypto = require("crypto");
-const { createClient } = require("redis");
 require("dotenv").config();
 const { apiLimiter, authLimiter } = require("./middlewares/rateLimiter");
 const { authenticateToken } = require("./middlewares/authenticateToken");
 
 const transactionRouter = require("./routes/transactionRoutes");
 const authRouter = require("./routes/authRoutes");
+
+const { createClient } = require("redis");
 
 const redisPublisher = createClient();
 const redisSubscriber = createClient();
@@ -22,7 +23,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: "*",
+    origin: "http://localhost:5173",
     credentials: true,
     exposedHeaders: ["Authorization"],
   })

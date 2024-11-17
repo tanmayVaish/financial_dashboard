@@ -3,8 +3,17 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { authenticateToken } = require("../middlewares/authenticateToken");
 const transactionRouter = express.Router();
+const { createClient } = require("redis");
 
-transactionRouter.get("/transactions", authenticateToken, async (req, res) => {
+const redisPublisher = createClient();
+const redisSubscriber = createClient();
+
+(async () => {
+  await redisPublisher.connect();
+  await redisSubscriber.connect();
+})();
+
+transactionRouter.get("/transactions", async (req, res) => {
   const {
     page = 1,
     limit = 10,
@@ -33,13 +42,15 @@ transactionRouter.get("/transactions", authenticateToken, async (req, res) => {
     });
     res.json(transactions);
   } catch (error) {
+    console.log(error);
+
     res.status(500).send("Internal Server Error");
   }
 });
 
 transactionRouter.get(
   "/transactions/:id",
-  authenticateToken,
+
   async (req, res) => {
     const { id } = req.params;
     try {
@@ -50,12 +61,14 @@ transactionRouter.get(
       if (!transaction) return res.status(404).send("Transaction not found");
       res.json(transaction);
     } catch (error) {
+      console.log(error);
+
       res.status(500).send("Internal Server Error");
     }
   }
 );
 
-transactionRouter.get("/summary", authenticateToken, async (req, res) => {
+transactionRouter.get("/summary", async (req, res) => {
   try {
     const currentDay = new Date();
     currentDay.setHours(0, 0, 0, 0);
@@ -131,12 +144,14 @@ transactionRouter.get("/summary", authenticateToken, async (req, res) => {
       last30DaysAmount,
     });
   } catch (error) {
+    console.log(error);
     res.status(500).send("Internal Server Error");
   }
 });
 
-transactionRouter.post("/transactions", authenticateToken, async (req, res) => {
+transactionRouter.post("/transactions", async (req, res) => {
   const { type, amount, status, payeeId, recipientId } = req.body;
+
   if (!type || !["credit", "debit"].includes(type))
     return res.status(400).send("Invalid transaction type.");
   if (!amount || isNaN(amount) || amount <= 0)
@@ -161,6 +176,7 @@ transactionRouter.post("/transactions", authenticateToken, async (req, res) => {
     redisPublisher.publish("transactions", JSON.stringify(transaction));
     res.json(transaction);
   } catch (error) {
+    console.log(error);
     res.status(500).send("Internal Server Error");
   }
 });
