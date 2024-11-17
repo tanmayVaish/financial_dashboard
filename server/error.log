@@ -1,0 +1,6 @@
+{"error":{},"level":"error","message":"Error fetching transaction summary","timestamp":"2024-11-17T12:25:02.559Z"}
+{"error":{},"level":"error","message":"Error fetching transaction summary","timestamp":"2024-11-17T12:25:04.497Z"}
+{"error":{},"level":"error","message":"Error fetching transaction summary","timestamp":"2024-11-17T12:25:06.666Z"}
+{"error":{},"level":"error","message":"Error fetching transaction summary","timestamp":"2024-11-17T12:25:13.098Z"}
+{"error":{},"level":"error","message":"Error fetching transaction summary","timestamp":"2024-11-17T12:25:16.375Z"}
+{"error":"redisPublisher.setex is not a function","level":"error","message":"Error fetching transaction summary","stack":"TypeError: redisPublisher.setex is not a function\n    at /home/loen/Projects/financial_dashboard/server/routes/transactionRoutes.js:152:26","timestamp":"2024-11-17T12:27:54.565Z"}

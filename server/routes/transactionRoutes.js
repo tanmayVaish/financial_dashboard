@@ -149,17 +149,21 @@ transactionRouter.get("/summary", async (req, res) => {
     };
 
     // Cache the result in Redis for 1 hour (3600 seconds)
-    await redisPublisher.setex(cacheKey, 3600, JSON.stringify(summary));
+    await redisPublisher.set(cacheKey, JSON.stringify(summary), {
+      EX: 3600, // Set the expiry time to 1 hour (3600 seconds)
+    });
 
     // Return the response
     res.json(summary);
   } catch (error) {
-    logger.error("Error fetching transaction summary", { error });
+    // Log the complete error details to diagnose the issue
+    logger.error("Error fetching transaction summary", {
+      error: error.message, // Include the error message
+      stack: error.stack, // Include stack trace for debugging
+    });
     res.status(500).send("Internal Server Error");
   }
 });
-
-module.exports = transactionRouter;
 
 transactionRouter.post("/transactions", async (req, res) => {
   const { type, amount, status, payeeId, recipientId } = req.body;
