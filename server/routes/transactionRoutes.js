@@ -111,7 +111,7 @@ transactionRouter.get("/summary", async (req, res) => {
       dailyTotalAmount,
       monthlyVolume,
       monthlyTotalAmount,
-      last30DaysData,
+      last30DaysTransactions,
     ] = await Promise.all([
       prisma.transaction.count(),
       prisma.transaction.aggregate({ _avg: { amount: true } }),
@@ -130,11 +130,32 @@ transactionRouter.get("/summary", async (req, res) => {
         _sum: { amount: true },
         where: { createdAt: { gte: startOfMonth, lt: startOfNextMonth } },
       }),
-      prisma.transaction.findMany({
-        where: { createdAt: { gte: last30DaysStart, lt: nextDay } },
-        select: { createdAt: true, amount: true },
+      prisma.transaction.groupBy({
+        by: ["createdAt"], // Group by the date (ignore time)
+        _sum: { amount: true }, // Sum of amounts for each day
+        _count: { id: true }, // Count of transactions for each day
+        where: {
+          createdAt: { gte: last30DaysStart, lt: nextDay },
+        },
       }),
     ]);
+
+    // Transform the last30DaysTransactions into amount and volume arrays
+    const last30DaysAmount = new Array(30).fill(0); // Initialize with zeroes
+    const last30DaysVolume = new Array(30).fill(0); // Initialize with zeroes
+
+    last30DaysTransactions.forEach((day) => {
+      // Calculate the index for the last 30 days (0 is today, 29 is 29 days ago)
+      const dayIndex = Math.floor(
+        (currentDay - new Date(day.createdAt).setHours(0, 0, 0, 0)) /
+          (1000 * 60 * 60 * 24)
+      );
+
+      if (dayIndex >= 0 && dayIndex < 30) {
+        last30DaysAmount[dayIndex] = day._sum.amount || 0;
+        last30DaysVolume[dayIndex] = day._count.id || 0;
+      }
+    });
 
     // Create the response object
     const summary = {
@@ -145,7 +166,8 @@ transactionRouter.get("/summary", async (req, res) => {
       dailyTotalAmount: dailyTotalAmount._sum.amount || 0,
       monthlyVolume,
       monthlyTotalAmount: monthlyTotalAmount._sum.amount || 0,
-      last30DaysData,
+      last30DaysAmount,
+      last30DaysVolume,
     };
 
     // Cache the result in Redis for 1 hour (3600 seconds)

@@ -47,10 +47,8 @@ const TransactionRecent = () => {
     };
   }, []);
 
-  console.log("Received data:", data);
-
   return (
-    <div className="flex flex-col gap-2 flex-1">
+    <div className="flex flex-col gap-2 flex-1 w-7/12">
       <Paper
         sx={{ backgroundColor: "#f5f5f5", width: "100%", padding: "10px" }}
       >

@@ -71,7 +71,20 @@ const Dashboard = ({ authToken }) => {
 
   return (
     <div className="flex flex-col items-center bg-gray-200 p-4">
-      <h1 className="text-5xl m-4 font-bold text-center">Dashboard</h1>
+      <div className="flex items-center justify-between w-8/12">
+        <h1 className="text-5xl m-4 font-bold text-center">
+          Financial Dashboard
+        </h1>
+        <div
+          onClick={() => {
+            localStorage.removeItem("authToken");
+            window.location.reload();
+          }}
+          className="top-4 right-4 cursor-pointer bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition duration-300"
+        >
+          Logout
+        </div>
+      </div>
       <div className="w-full max-w-screen-xl flex flex-col gap-5 mx-auto">
         <TransactionSummary summary={summary} />
 
@@ -80,7 +93,7 @@ const Dashboard = ({ authToken }) => {
           <TransactionRecent />
 
           {/* Transaction Status Pie Chart */}
-          <div className="flex flex-col gap-4 items-center justify-center w-full sm:w-96">
+          <div className="flex flex-col gap-4 items-center justify-center w-5/12">
             <Paper
               sx={{
                 backgroundColor: "#f5f5f5",
@@ -133,8 +146,8 @@ const Dashboard = ({ authToken }) => {
         <DataTable />
 
         {/* Bar Charts for Last 30 Days */}
-        <div className="flex flex-wrap gap-5 w-full">
-          <div className="flex flex-col gap-4 w-full sm:w-1/2">
+        <div className="flex flex-row gap-5 w-full">
+          <div className="flex flex-col gap-4 w-1/2">
             <Paper
               sx={{
                 backgroundColor: "#f5f5f5",
@@ -162,13 +175,13 @@ const Dashboard = ({ authToken }) => {
                     ), // 1 to 30
                   },
                 ]}
-                series={[{ data: summary?.last30DaysCount || [] }]}
+                series={[{ data: summary?.last30DaysVolume || [] }]}
                 height={500}
               />
             </Paper>
           </div>
 
-          <div className="flex flex-col gap-4 w-full sm:w-1/2">
+          <div className="flex flex-col gap-4 w-1/2">
             <Paper
               sx={{
                 backgroundColor: "#f5f5f5",
