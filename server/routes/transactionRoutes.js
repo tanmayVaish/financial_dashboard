@@ -1,16 +1,21 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-const { authenticateToken } = require("../middlewares/authenticateToken");
-const transactionRouter = express.Router();
 const { createClient } = require("redis");
+const logger = require("../misc/logger");
+
+const prisma = new PrismaClient();
+const transactionRouter = express.Router();
 
 const redisPublisher = createClient();
 const redisSubscriber = createClient();
 
 (async () => {
-  await redisPublisher.connect();
-  await redisSubscriber.connect();
+  try {
+    await redisPublisher.connect();
+    await redisSubscriber.connect();
+  } catch (error) {
+    logger.error("Error connecting to Redis", { error });
+  }
 })();
 
 transactionRouter.get("/transactions", async (req, res) => {
@@ -42,31 +47,31 @@ transactionRouter.get("/transactions", async (req, res) => {
     });
     res.json(transactions);
   } catch (error) {
-    console.log(error);
-
+    logger.error("Error fetching transactions", {
+      error,
+      queryParams: req.query,
+    });
     res.status(500).send("Internal Server Error");
   }
 });
 
-transactionRouter.get(
-  "/transactions/:id",
-
-  async (req, res) => {
-    const { id } = req.params;
-    try {
-      const transaction = await prisma.transaction.findUnique({
-        where: { id: parseInt(id) },
-        include: { payee: true, recipient: true },
-      });
-      if (!transaction) return res.status(404).send("Transaction not found");
-      res.json(transaction);
-    } catch (error) {
-      console.log(error);
-
-      res.status(500).send("Internal Server Error");
-    }
+transactionRouter.get("/transactions/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: parseInt(id) },
+      include: { payee: true, recipient: true },
+    });
+    if (!transaction) return res.status(404).send("Transaction not found");
+    res.json(transaction);
+  } catch (error) {
+    logger.error("Error fetching transaction by ID", {
+      error,
+      params: req.params,
+    });
+    res.status(500).send("Internal Server Error");
   }
-);
+});
 
 transactionRouter.get("/summary", async (req, res) => {
   try {
@@ -87,6 +92,7 @@ transactionRouter.get("/summary", async (req, res) => {
     const last30DaysStart = new Date();
     last30DaysStart.setDate(last30DaysStart.getDate() - 29);
     last30DaysStart.setHours(0, 0, 0, 0);
+
     const [
       totalVolume,
       averageAmount,
@@ -119,19 +125,7 @@ transactionRouter.get("/summary", async (req, res) => {
         select: { createdAt: true, amount: true },
       }),
     ]);
-    const last30DaysCount = Array(30).fill(0);
-    const last30DaysAmount = Array(30).fill(0);
-    last30DaysData.forEach((transaction) => {
-      const transactionDate = new Date(transaction.createdAt);
-      transactionDate.setHours(0, 0, 0, 0);
-      const diffDays = Math.floor(
-        (currentDay - transactionDate) / (1000 * 60 * 60 * 24)
-      );
-      if (diffDays >= 0 && diffDays < 30) {
-        last30DaysCount[29 - diffDays]++;
-        last30DaysAmount[29 - diffDays] += transaction.amount;
-      }
-    });
+
     res.json({
       totalVolume,
       averageAmount: averageAmount._avg.amount || 0,
@@ -140,11 +134,10 @@ transactionRouter.get("/summary", async (req, res) => {
       dailyTotalAmount: dailyTotalAmount._sum.amount || 0,
       monthlyVolume,
       monthlyTotalAmount: monthlyTotalAmount._sum.amount || 0,
-      last30DaysCount,
-      last30DaysAmount,
+      last30DaysData,
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Error fetching transaction summary", { error });
     res.status(500).send("Internal Server Error");
   }
 });
@@ -162,6 +155,7 @@ transactionRouter.post("/transactions", async (req, res) => {
     return res.status(400).send("Payee and recipient are required.");
   if (payeeId === recipientId)
     return res.status(400).send("Payee and recipient cannot be the same.");
+
   try {
     const [payee, recipient] = await Promise.all([
       prisma.user.findUnique({ where: { id: payeeId } }),
@@ -176,7 +170,10 @@ transactionRouter.post("/transactions", async (req, res) => {
     redisPublisher.publish("transactions", JSON.stringify(transaction));
     res.json(transaction);
   } catch (error) {
-    console.log(error);
+    logger.error("Error creating transaction", {
+      error,
+      requestBody: req.body,
+    });
     res.status(500).send("Internal Server Error");
   }
 });
