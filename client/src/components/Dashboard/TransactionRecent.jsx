@@ -1,5 +1,31 @@
-import { Paper } from "@mui/material";
-import React, { useEffect, useState } from "react";
+import { DataGrid } from "@mui/x-data-grid";
+import Paper from "@mui/material/Paper";
+import { useEffect, useState } from "react";
+
+const columns = [
+  { field: "id", headerName: "ID", flex: 1 },
+  { field: "type", headerName: "Transaction Type", flex: 2 },
+  { field: "amount", headerName: "Transaction Amount", flex: 2 },
+  {
+    field: "status",
+    headerName: "Status",
+    flex: 1,
+    align: "right",
+    headerAlign: "right",
+  },
+  {
+    field: "createdAt",
+    headerName: "Date",
+    flex: 2,
+    align: "right",
+    sortable: false,
+    headerAlign: "right",
+    valueFormatter: (params) => {
+      const date = new Date(params);
+      return date.toLocaleDateString();
+    },
+  },
+];
 
 const TransactionRecent = () => {
   const [data, setData] = useState([]);
@@ -33,9 +59,19 @@ const TransactionRecent = () => {
       <Paper
         sx={{ backgroundColor: "#f5f5f5", width: "100%", padding: "10px" }}
       >
-        {data.map((item, index) => (
-          <p key={index}>{JSON.stringify(item)}</p>
-        ))}
+        <DataGrid
+          rows={data}
+          columns={columns}
+          pagination
+          pageSize={5}
+          // onPageChange={(newPage) => setPage(newPage + 1)}
+          initialState={{
+            pagination: { paginationModel: { page: 0, pageSize: 5 } },
+          }}
+          pageSizeOptions={[3, 5]}
+          sx={{ border: 0 }}
+          autoHeight
+        />
       </Paper>
     </div>
   );

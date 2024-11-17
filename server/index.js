@@ -205,6 +205,47 @@ app.get('/summary', authenticateToken, async (req, res) => {
       }
     });
 
+    // Last 30 days' volume and total amount
+    const last30DaysCount = [];
+    const last30DaysAmount = [];
+    
+    for (let i = 0; i < 30; i++) {
+      const day = new Date();
+      day.setDate(day.getDate() - i);
+      const startOfDay = new Date(day);
+      startOfDay.setHours(0, 0, 0, 0); // Start of the day
+      const endOfDay = new Date(day);
+      endOfDay.setHours(23, 59, 59, 999); // End of the day
+
+      const dailyCount = await prisma.transaction.count({
+        where: {
+          createdAt: {
+            gte: startOfDay,
+            lt: endOfDay
+          }
+        }
+      });
+
+      const dailySum = await prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: {
+          createdAt: {
+            gte: startOfDay,
+            lt: endOfDay
+          }
+        }
+      });
+
+      last30DaysCount.push(
+        dailyCount
+      );
+
+      last30DaysAmount.push(
+        dailySum._sum.amount || 0
+      );
+
+    }
+
     // Response with all calculated metrics
     res.json({
       totalVolume,
@@ -213,13 +254,16 @@ app.get('/summary', authenticateToken, async (req, res) => {
       dailyVolume,
       dailyTotalAmount: dailyTotalAmount._sum.amount || 0,
       monthlyVolume,
-      monthlyTotalAmount: monthlyTotalAmount._sum.amount || 0
+      monthlyTotalAmount: monthlyTotalAmount._sum.amount || 0,
+      last30DaysCount,
+      last30DaysAmount
     });
   } catch (error) {
     console.error('Error fetching summary:', error);
     res.status(500).send('Internal Server Error');
   }
 });
+
 
 
 app.get('/events', (req, res) => {

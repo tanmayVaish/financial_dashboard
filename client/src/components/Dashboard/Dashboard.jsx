@@ -5,6 +5,7 @@ import TransactionSummary from "./TransactionSummary";
 import TransactionRecent from "./TransactionRecent";
 import { Paper } from "@mui/material";
 import { PieChart } from "@mui/x-charts/PieChart";
+import { BarChart } from "@mui/x-charts/BarChart";
 
 import axios from "axios";
 
@@ -15,7 +16,7 @@ const Dashboard = ({ authToken }) => {
 
   const navigate = useNavigate();
 
-  const fetchTransactions = async () => {
+  const fetchSummary = async () => {
     try {
       const response = await axios.get(`${API_URL}/summary`, {
         headers: {
@@ -29,7 +30,7 @@ const Dashboard = ({ authToken }) => {
   };
 
   useEffect(() => {
-    fetchTransactions();
+    fetchSummary();
   }, []);
 
   useEffect(() => {
@@ -39,13 +40,13 @@ const Dashboard = ({ authToken }) => {
   }, [authToken, navigate]);
 
   return (
-    <div className="flex flex-col items-center bg-gray-200 h-screen">
+    <div className="flex flex-col items-center bg-gray-200 ">
       <div className="text-5xl m-4 font-bold ">Dashboard</div>
       <div className="w-4/5 h-full flex flex-col gap-5">
         <TransactionSummary summary={summary} />
-        <div className="flex flex-wrap gap-5">
+        <div className="flex flex-wrap gap-5 w-full">
           <TransactionRecent />
-          <div className="flex flex-col gap-2 items-center justify-center">
+          <div className="flex flex-col gap-2 items-center justify-center w-96">
             <Paper
               sx={{
                 backgroundColor: "#f5f5f5",
@@ -94,6 +95,142 @@ const Dashboard = ({ authToken }) => {
           </div>
         </div>
         <DataTable />
+        <div className="flex flex-row gap-5">
+          <div className="flex flex-col gap-2 w-1/2">
+            <Paper
+              sx={{
+                backgroundColor: "#f5f5f5",
+                width: "100%",
+                padding: "10px",
+              }}
+            >
+              <h2>Volume in Last 30 Days</h2>
+            </Paper>
+            <Paper
+              sx={{
+                backgroundColor: "#f5f5f5",
+                width: "100%",
+                padding: "10px",
+              }}
+            >
+              <BarChart
+                xAxis={[
+                  {
+                    scaleType: "band",
+                    data: [
+                      "1",
+                      "2",
+                      "3",
+                      "4",
+                      "5",
+                      "6",
+                      "7",
+                      "8",
+                      "9",
+                      "10",
+                      "11",
+                      "12",
+                      "13",
+                      "14",
+                      "15",
+                      "16",
+                      "17",
+                      "18",
+                      "19",
+                      "20",
+                      "21",
+                      "22",
+                      "23",
+                      "24",
+                      "25",
+                      "26",
+                      "27",
+                      "28",
+                      "29",
+                      "30",
+                    ],
+                  },
+                ]}
+                series={[
+                  {
+                    data:
+                      summary && summary.last30DaysCount
+                        ? summary.last30DaysCount
+                        : [],
+                  },
+                ]}
+                height={500}
+              />
+            </Paper>
+          </div>
+          <div className="flex flex-col gap-2 w-1/2">
+            <Paper
+              sx={{
+                backgroundColor: "#f5f5f5",
+                width: "100%",
+                padding: "10px",
+              }}
+            >
+              <h2>Total Amount in Last 30 Days</h2>
+            </Paper>
+            <Paper
+              sx={{
+                backgroundColor: "#f5f5f5",
+                width: "100%",
+                padding: "10px",
+              }}
+            >
+              <BarChart
+                xAxis={[
+                  {
+                    scaleType: "band",
+                    data: [
+                      "1",
+                      "2",
+                      "3",
+                      "4",
+                      "5",
+                      "6",
+                      "7",
+                      "8",
+                      "9",
+                      "10",
+                      "11",
+                      "12",
+                      "13",
+                      "14",
+                      "15",
+                      "16",
+                      "17",
+                      "18",
+                      "19",
+                      "20",
+                      "21",
+                      "22",
+                      "23",
+                      "24",
+                      "25",
+                      "26",
+                      "27",
+                      "28",
+                      "29",
+                      "30",
+                    ],
+                  },
+                ]}
+                series={[
+                  {
+                    data:
+                      summary && summary.last30DaysAmount
+                        ? summary.last30DaysAmount
+                        : [],
+                  },
+                ]}
+                height={500}
+              />
+            </Paper>
+          </div>
+        </div>
       </div>
     </div>
   );
