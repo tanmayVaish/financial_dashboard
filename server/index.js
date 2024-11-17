@@ -5,6 +5,17 @@ const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const crypto = require('crypto');
 
+const { createClient } = require('redis');
+
+const redisPublisher = createClient();
+const redisSubscriber = createClient();
+
+(async () => {
+  await redisPublisher.connect();
+  await redisSubscriber.connect();
+})();
+
+
 require('dotenv').config();
 
 const prisma = new PrismaClient();
@@ -131,64 +142,113 @@ app.get('/transactions/:id', authenticateToken, async (req, res) => {
 });
 
 app.get('/summary', authenticateToken, async (req, res) => {
-  const totalVolume = await prisma.transaction.aggregate({
-    _sum: { amount: true }
-  });
+  try {
+    // Total transaction count
+    const totalVolume = await prisma.transaction.count();
 
-  const averageAmount = await prisma.transaction.aggregate({
-    _avg: { amount: true }
-  });
+    // Average transaction amount
+    const averageAmount = await prisma.transaction.aggregate({
+      _avg: { amount: true }
+    });
 
-  const statusCount = await prisma.transaction.groupBy({
-    by: ['status'],
-    _count: { status: true }
-  });
+    // Transaction count by status
+    const statusCount = await prisma.transaction.groupBy({
+      by: ['status'],
+      _count: { status: true }
+    });
 
-  res.json({
-    totalVolume: totalVolume._sum.amount,
-    averageAmount: averageAmount._avg.amount,
-    statusCount
-  });
+    // Current day totals
+    const currentDay = new Date();
+    currentDay.setHours(0, 0, 0, 0); // Start of the day
+    const nextDay = new Date(currentDay);
+    nextDay.setDate(nextDay.getDate() + 1); // Start of the next day
+
+    const dailyVolume = await prisma.transaction.count({
+      where: {
+        createdAt: {
+          gte: currentDay,
+          lt: nextDay
+        }
+      }
+    });
+
+    const dailyTotalAmount = await prisma.transaction.aggregate({
+      _sum: { amount: true },
+      where: {
+        createdAt: {
+          gte: currentDay,
+          lt: nextDay
+        }
+      }
+    });
+
+    // Current month totals
+    const startOfMonth = new Date(currentDay.getFullYear(), currentDay.getMonth(), 1); // First day of the month
+    const startOfNextMonth = new Date(currentDay.getFullYear(), currentDay.getMonth() + 1, 1); // First day of the next month
+
+    const monthlyVolume = await prisma.transaction.count({
+      where: {
+        createdAt: {
+          gte: startOfMonth,
+          lt: startOfNextMonth
+        }
+      }
+    });
+
+    const monthlyTotalAmount = await prisma.transaction.aggregate({
+      _sum: { amount: true },
+      where: {
+        createdAt: {
+          gte: startOfMonth,
+          lt: startOfNextMonth
+        }
+      }
+    });
+
+    // Response with all calculated metrics
+    res.json({
+      totalVolume,
+      averageAmount: averageAmount._avg.amount || 0,
+      statusCount,
+      dailyVolume,
+      dailyTotalAmount: dailyTotalAmount._sum.amount || 0,
+      monthlyVolume,
+      monthlyTotalAmount: monthlyTotalAmount._sum.amount || 0
+    });
+  } catch (error) {
+    console.error('Error fetching summary:', error);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
-app.get('/recent-transactions', authenticateToken, async (req, res) => {
-  const transactions = await prisma.transaction.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 10
-  });
-
-  res.json(transactions);
-});
 
 app.get('/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+
   res.flushHeaders();
 
-  const sendTransactionUpdate = async () => {
-    const latestTransaction = await prisma.transaction.findFirst({
-      orderBy: { createdAt: 'desc' }
-    });
-    res.write(`data: ${JSON.stringify(latestTransaction)}\n\n`);
+  // Handle Redis subscription
+  const handleTransactionUpdate = (message) => {
+    res.write(`data: ${message}\n\n`);
   };
 
-  const transactionListener = async () => {
-    sendTransactionUpdate();
-  };
-
-  transactionListener();
+  redisSubscriber.subscribe('transactions', (message) => {
+    handleTransactionUpdate(message);
+  });
 
   req.on('close', () => {
     console.log('Client disconnected');
+    redisSubscriber.unsubscribe('transactions');
     res.end();
   });
 });
 
+
 app.post('/transactions', authenticateToken, async (req, res) => {
   const { type, amount, status, payeeId, recipientId } = req.body;
 
-  // Basic validation
   if (!type || !['credit', 'debit'].includes(type)) {
     return res.status(400).send('Invalid transaction type. Must be "credit" or "debit".');
   }
@@ -206,7 +266,6 @@ app.post('/transactions', authenticateToken, async (req, res) => {
   }
 
   try {
-    // Validate payee and recipient
     const [payee, recipient] = await Promise.all([
       prisma.user.findUnique({ where: { id: payeeId } }),
       prisma.user.findUnique({ where: { id: recipientId } })
@@ -227,12 +286,16 @@ app.post('/transactions', authenticateToken, async (req, res) => {
       }
     });
 
+    // Publish the new transaction to Redis
+    await redisPublisher.publish('transactions', JSON.stringify(transaction));
+
     res.status(201).json(transaction);
   } catch (error) {
     console.error('Error creating transaction:', error);
     res.status(500).send('Internal Server Error');
   }
 });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

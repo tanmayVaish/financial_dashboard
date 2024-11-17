@@ -5,7 +5,7 @@ const TransactionRecent = () => {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    const eventSource = new EventSource("/events");
+    const eventSource = new EventSource("http://localhost:3000/events");
 
     eventSource.onmessage = (event) => {
       const newData = JSON.parse(event.data);
@@ -24,13 +24,20 @@ const TransactionRecent = () => {
   console.log("Received data:", data);
 
   return (
-    <Paper sx={{ backgroundColor: "#f5f5f5", width: "100%", padding: "10px" }}>
-      {/* Display the received data */}
-      <h2>Transaction Recent</h2>
-      {data.map((item, index) => (
-        <p key={index}>{JSON.stringify(item)}</p>
-      ))}
-    </Paper>
+    <div className="flex flex-col gap-2 flex-1">
+      <Paper
+        sx={{ backgroundColor: "#f5f5f5", width: "100%", padding: "10px" }}
+      >
+        <h2>Transaction Recent</h2>
+      </Paper>
+      <Paper
+        sx={{ backgroundColor: "#f5f5f5", width: "100%", padding: "10px" }}
+      >
+        {data.map((item, index) => (
+          <p key={index}>{JSON.stringify(item)}</p>
+        ))}
+      </Paper>
+    </div>
   );
 };
 
