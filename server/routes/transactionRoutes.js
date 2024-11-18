@@ -20,14 +20,15 @@ const redisSubscriber = createClient();
 
 transactionRouter.get("/transactions", async (req, res) => {
   const {
-    page = 1,
-    limit = 10,
+    page = 1, // Default to 1 if page is not provided
+    limit = 5, // Default to 10 if limit is not provided
     type,
     status,
     startDate,
     endDate,
     id,
   } = req.query;
+
   const where = {};
   if (id) where.id = parseInt(id);
   if (type) where.type = type;
@@ -38,14 +39,17 @@ transactionRouter.get("/transactions", async (req, res) => {
       lte: new Date(endDate),
     };
   }
+
   try {
+    const totalCount = await prisma.transaction.count({ where }); // Total count of rows matching the filter
     const transactions = await prisma.transaction.findMany({
       where,
-      skip: (page - 1) * limit,
+      skip: (parseInt(page) - 1) * parseInt(limit),
       take: parseInt(limit),
       include: { payee: true, recipient: true },
     });
-    res.json(transactions);
+
+    res.json({ transactions, totalCount });
   } catch (error) {
     logger.error("Error fetching transactions", {
       error,

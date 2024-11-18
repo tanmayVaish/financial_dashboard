@@ -214,7 +214,6 @@ const DataTable = () => {
                 pagination: { paginationModel: { page, pageSize: limit } },
               }}
               onPaginationModelChange={handlePaginationModelChange} // Capture page change here
-              pageSizeOptions={[5, 10]}
               sx={{ border: 0 }}
             />
           )}
