@@ -4,7 +4,6 @@ import Paper from "@mui/material/Paper";
 import InputLabel from "@mui/material/InputLabel";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
-import Button from "@mui/material/Button";
 import Select from "@mui/material/Select";
 import { Skeleton, Snackbar, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
@@ -36,18 +35,19 @@ const columns = [
 ];
 
 const DataTable = () => {
-  const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(10);
+  const [page, setPage] = React.useState(0); // 0-based page index
+  const [limit, setLimit] = React.useState(5); // Default page size
   const [type, setType] = React.useState("");
   const [status, setStatus] = React.useState("");
   const [startDate, setStartDate] = React.useState("");
   const [endDate, setEndDate] = React.useState("");
   const [id, setId] = React.useState("");
-  const [loading, setLoading] = React.useState(true); // Add loading state
+  const [loading, setLoading] = React.useState(true);
   const [transactions, setTransactions] = React.useState([]);
   const [openSnackbar, setOpenSnackbar] = React.useState(false);
   const [snackbarMessage, setSnackbarMessage] = React.useState("");
   const [snackbarSeverity, setSnackbarSeverity] = React.useState("success");
+  const [totalCount, setTotalCount] = React.useState(0);
 
   const navigate = useNavigate();
 
@@ -62,7 +62,7 @@ const DataTable = () => {
         `${import.meta.env.VITE_API_URL}/transactions`,
         {
           params: {
-            page,
+            page: page + 1, // API expects 1-based page index
             limit,
             type,
             status,
@@ -75,7 +75,8 @@ const DataTable = () => {
           },
         }
       );
-      setTransactions(response.data);
+      setTransactions(response.data.transactions);
+      setTotalCount(response.data.totalCount); // Set the total count for pagination
       setLoading(false); // End loading when data is fetched
       setSnackbarMessage("Transactions loaded successfully!");
       setSnackbarSeverity("success");
@@ -123,6 +124,11 @@ const DataTable = () => {
     setOpenSnackbar(false);
   };
 
+  const handlePaginationModelChange = (paginationModel) => {
+    setPage(paginationModel.page); // Update page (0-based index)
+    setLimit(paginationModel.pageSize); // Update page size
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <Paper
@@ -165,6 +171,7 @@ const DataTable = () => {
           <div className="flex gap-2 items-center justify-center pr-10 border-r-2">
             <Select
               defaultValue={""}
+              placeholder="Limit"
               label="Transaction Type"
               onChange={handleTypeChange}
             >
@@ -176,6 +183,7 @@ const DataTable = () => {
           <div className="flex gap-2 items-center justify-center ">
             <Select
               defaultValue=""
+              placeholder="Status"
               label="Status"
               onChange={handleStatusChange}
             >
@@ -198,14 +206,16 @@ const DataTable = () => {
               rows={transactions}
               columns={columns}
               pagination
+              paginationMode="server"
+              rowCount={totalCount}
+              page={page} // page count, 0-based
               pageSize={limit}
-              onPageChange={(newPage) => setPage(newPage + 1)}
               initialState={{
-                pagination: { paginationModel: { page: 0, pageSize: 5 } },
+                pagination: { paginationModel: { page, pageSize: limit } },
               }}
+              onPaginationModelChange={handlePaginationModelChange} // Capture page change here
               pageSizeOptions={[5, 10]}
               sx={{ border: 0 }}
-              autoHeight
             />
           )}
         </Paper>
